@@ -30,24 +30,35 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci 2>&1
 
-      - name: Prebuild
-        run: npx expo prebuild --platform android --clean 2>&1
+      - name: Check Expo config
+        run: npx expo config --type public 2>&1 || true
 
-      - name: List generated files
-        run: ls -la android/ 2>&1 || echo "no android dir"
+      - name: Run Expo prebuild
+        run: npx expo prebuild --platform android --clean 2>&1 || true
+
+      - name: Check what was generated
+        run: |
+          echo "=== Android dir ==="
+          ls -la android/ 2>/dev/null || echo "no android dir"
+          echo "=== Gradle files ==="
+          find android -name "*.gradle*" -type f 2>/dev/null | head -10
+          echo "=== Settings ==="
+          cat android/settings.gradle 2>/dev/null || echo "no settings"
 
       - name: Build debug APK
         run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -50
+          if [ -f android/gradlew ]; then
+            cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon 2>&1 | tail -30
+          else
+            echo "No Gradle wrapper found"
+            exit 1
+          fi
 
-      - name: Upload APK (debug)
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: family-locator-apk
-          path: |
-            family-tracker-app/android/app/build/outputs/apk/debug/*.apk
-            family-tracker-app/android/app/build/outputs/apk/release/*.apk
+          name: apk
+          path: family-tracker-app/android/app/build/outputs/**/*.apk
           if-no-files-found: warn

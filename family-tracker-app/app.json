@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "家人位置",
+    "slug": "family-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch"],
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "此应用需要在后台获取您的位置信息，以便家人能实时看到您的位置。",
+        "NSLocationWhenInUseUsageDescription": "此应用需要获取您的位置信息。",
+        "NSLocationAlwaysUsageDescription": "此应用需要在后台获取您的位置信息。"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_BACKGROUND_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "允许此应用在后台获取位置信息？",
+          "locationWhenInUsePermission": "允许此应用获取位置信息？"
+        }
+      ]
+    ]
+  }
+}

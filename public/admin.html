@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家人位置 - 管理员</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, sans-serif; }
+#map { width: 100vw; height: 100vh; }
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: rgba(255,255,255,0.95); padding: 12px 20px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.header h1 { font-size: 18px; color: #333; flex: 1; }
+.header .status { font-size: 12px; color: #999; }
+.header .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.online { background: #22c55e; }
+.dot.offline { background: #ef4444; }
+.sidebar {
+  position: fixed; right: 0; top: 52px; bottom: 0; z-index: 1000;
+  width: 280px; background: rgba(255,255,255,0.95);
+  box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+  overflow-y: auto; padding: 16px;
+}
+.sidebar h2 { font-size: 14px; color: #666; margin-bottom: 12px; }
+.member {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 8px; margin-bottom: 8px;
+  background: #f8f9fa; cursor: pointer; transition: background 0.2s;
+}
+.member:hover { background: #e9ecef; }
+.member .avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 16px; font-weight: bold;
+}
+.member .info { flex: 1; }
+.member .name { font-size: 14px; font-weight: 600; color: #333; }
+.member .time { font-size: 11px; color: #999; margin-top: 2px; }
+.member .coord { font-size: 11px; color: #999; }
+.empty { text-align: center; padding: 40px 20px; color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📍 家人位置</h1>
+  <div class="status"><span class="dot offline" id="statusDot"></span> <span id="statusText">未连接</span></div>
+</div>
+<div id="map"></div>
+<div class="sidebar" id="sidebar">
+  <h2>👨‍👩‍👧‍👦 成员列表</h2>
+  <div id="memberList"><div class="empty">暂无位置数据<br><br>等待家人端上报位置中...</div></div>
+</div>
+
+<script>
+// 管理员 token（请修改）
+const ADMIN_TOKEN = '***';
+
+const map = L.map('map').setView([35, 110], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+const markers = {};
+const colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+let colorIdx = 0;
+
+// WebSocket 连接
+const ws = new WebSocket(`ws://${location.host}`);
+let connected = false;
+
+ws.onopen = () => {
+  connected = true;
+  document.getElementById('statusDot').className = 'dot online';
+  document.getElementById('statusText').textContent = '已连接';
+  ws.send(JSON.stringify({ type: 'auth', token: ADMIN_TOKEN }));
+};
+
+ws.onclose = () => {
+  connected = false;
+  document.getElementById('statusDot').className = 'dot offline';
+  document.getElementById('statusText').textContent = '已断开';
+};
+
+ws.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  if (data.type === 'init') {
+    data.locations.forEach(addOrUpdateMember);
+  } else if (data.type === 'location') {
+    addOrUpdateMember(data);
+  }
+};
+
+function addOrUpdateMember(data) {
+  const { device_id, name, lat, lng, updated_at } = data;
+  
+  if (!markers[device_id]) {
+    const color = colors[colorIdx++ % colors.length];
+    const marker = L.circleMarker([lat, lng], {
+      radius: 12, fillColor: color, color: '#fff',
+      weight: 2, opacity: 1, fillOpacity: 0.8
+    }).addTo(map);
+    marker.bindPopup(`<b>${name}</b><br>${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+    markers[device_id] = { marker, name, color, lastLat: lat, lastLng: lng };
+    
+    // 历史轨迹
+    markers[device_id].history = [];
+  }
+  
+  const m = markers[device_id];
+  m.marker.setLatLng([lat, lng]);
+  m.name = name;
+  m.lastLat = lat;
+  m.lastLng = lng;
+  
+  if (m.lastLat !== lat || m.lastLng !== lng) {
+    L.circleMarker([lat, lng], {
+      radius: 4, color: m.color, weight: 1, opacity: 0.4
+    }).addTo(map);
+  }
+  
+  // 自动定位到最新位置（可选）
+  // map.setView([lat, lng], map.getZoom());
+  
+  updateSidebar();
+}
+
+function updateSidebar() {
+  const list = document.getElementById('memberList');
+  const keys = Object.keys(markers);
+  if (keys.length === 0) {
+    list.innerHTML = '<div class="empty">暂无位置数据<br><br>等待家人端上报位置中...</div>';
+    return;
+  }
+  
+  list.innerHTML = keys.map(id => {
+    const m = markers[id];
+    return `<div class="member" onclick="map.setView([${m.lastLat}, ${m.lastLng}], 14)">
+      <div class="avatar" style="background:${m.color}">${m.name[0]}</div>
+      <div class="info">
+        <div class="name">${m.name}</div>
+        <div class="coord">${m.lastLat.toFixed(4)}, ${m.lastLng.toFixed(4)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// 失败重连
+setInterval(() => {
+  if (!connected && ws.readyState !== WebSocket.CONNECTING) {
+    location.reload();
+  }
+}, 10000);
+</script>
+</body>
+</html>

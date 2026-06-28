@@ -32,11 +32,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli
+      - name: Prebuild (generate android native project)
+        run: npx expo prebuild --platform android --clean
 
-      - name: Build APK
-        run: npx expo build:android -t apk --non-interactive
+      - name: Build APK with Gradle
+        run: cd android && ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

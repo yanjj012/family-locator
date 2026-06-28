@@ -12,7 +12,10 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ],
         "NSLocationAlwaysAndWhenInUseUsageDescription": "此应用需要在后台获取您的位置信息，以便家人能实时看到您的位置。",
         "NSLocationWhenInUseUsageDescription": "此应用需要获取您的位置信息。",
         "NSLocationAlwaysUsageDescription": "此应用需要在后台获取您的位置信息。"
@@ -26,8 +29,17 @@
         "ACCESS_BACKGROUND_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "FOREGROUND_SERVICE_LOCATION"
-      ]
+        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.anonymous.familytracker"
     },
     "plugins": [
       [
